@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: #050505;
+}
+
+body {
+  margin: 0;
+  font-family: 'Fraunces', Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  user-select: none;
+}
+
+textarea {
+  font-family: inherit;
+}
+
+/* Slider styling */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 2px;
+  background: rgba(245, 241, 232, 0.18);
+  border-radius: 999px;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  background: #f5f1e8;
+  margin-top: -6px;
+  border: none;
+  box-shadow: 0 0 12px rgba(255, 240, 220, 0.25);
+}
+input[type='range']::-moz-range-track {
+  height: 2px;
+  background: rgba(245, 241, 232, 0.18);
+  border-radius: 999px;
+}
+input[type='range']::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  background: #f5f1e8;
+  border: none;
+  box-shadow: 0 0 12px rgba(255, 240, 220, 0.25);
+}
+
+/* Subtle ambient backdrop glow */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 50% 30%, rgba(255, 240, 220, 0.04), transparent 70%),
+    radial-gradient(40% 30% at 50% 90%, rgba(180, 200, 255, 0.025), transparent 70%);
+  z-index: 0;
+}
+
+/* Hide scrollbars on the teleprompter view */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Countdown pulse */
+@keyframes countdownPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+.countdown-digit {
+  animation: countdownPulse 1s ease-out forwards;
+}
+
+/* Fade in */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}

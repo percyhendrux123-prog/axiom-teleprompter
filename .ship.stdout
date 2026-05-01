@@ -1,0 +1,25 @@
+[ship] Project: /Users/percystewart/dev/axiom-teleprompter
+[ship] Node: v24.14.1
+[ship] npm:  11.11.0
+[ship] gh:   gh version 2.91.0 (2026-04-22)
+[ship] Installing dependencies (this brings in netlify-cli locally)...
+npm warn deprecated glob@8.1.0: Glob versions prior to v9 are no longer supported
+
+added 1442 packages in 2m
+[ship] ntl:  netlify-cli/17.38.1 darwin-x64 node-v24.14.1
+[ship] Building...
+
+> axiom-teleprompter@0.1.0 build
+> tsc -b && vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 31 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.94 kB │ gzip:  0.47 kB
+dist/assets/index-d3PBzrQT.css   11.69 kB │ gzip:  3.33 kB
+dist/assets/index-CduEpSio.js   154.23 kB │ gzip: 49.44 kB
+✓ built in 2.94s
+[ship] Initializing git repo...
+Initialized empty Git repository in /Users/percystewart/dev/axiom-teleprompter/.git/
