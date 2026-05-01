@@ -8,12 +8,16 @@ type Settings = {
   speed: number
   fontSize: number
   mirrored: boolean
+  // opacity-control 2026-05-01: persisted reading-surface alpha (0.3-1.0)
+  opacity: number
 }
 
 const defaultSettings: Settings = {
   speed: 120,
   fontSize: 48,
   mirrored: false,
+  // opacity-control 2026-05-01: default fully opaque
+  opacity: 1,
 }
 
 function loadSettings(): Settings {
@@ -44,6 +48,9 @@ export default function App() {
   const [speed, setSpeed] = useState<number>(initial.speed)
   const [fontSize, setFontSize] = useState<number>(initial.fontSize)
   const [mirrored, setMirrored] = useState<boolean>(initial.mirrored)
+  // opacity-control 2026-05-01: reading-surface opacity + collapsible reveal in dock
+  const [opacity, setOpacity] = useState<number>(initial.opacity)
+  const [showOpacity, setShowOpacity] = useState<boolean>(false)
 
   const cardRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLDivElement>(null)
@@ -64,9 +71,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(
       SETTINGS_KEY,
-      JSON.stringify({ speed, fontSize, mirrored }),
+      // opacity-control 2026-05-01: include opacity in persisted settings
+      JSON.stringify({ speed, fontSize, mirrored, opacity }),
     )
-  }, [speed, fontSize, mirrored])
+  }, [speed, fontSize, mirrored, opacity])
 
   // Scroll animation
   useEffect(() => {
@@ -195,9 +203,28 @@ export default function App() {
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (mode !== 'view') return
       const target = e.target as HTMLElement | null
-      if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) return
+      const inField =
+        !!target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')
+
+      // fonts-only 2026-05-01: edit-mode shortcuts — L loads, C clears, Esc blurs the textarea
+      if (mode === 'edit') {
+        if (e.key === 'Escape') {
+          if (inField) (target as HTMLElement).blur()
+          return
+        }
+        if (inField) return
+        if (e.key === 'l' || e.key === 'L') {
+          e.preventDefault()
+          handleLoad()
+        } else if (e.key === 'c' || e.key === 'C') {
+          e.preventDefault()
+          handleClear()
+        }
+        return
+      }
+
+      if (inField) return
 
       if (e.key === ' ') {
         e.preventDefault()
@@ -225,28 +252,27 @@ export default function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [mode, handlePlay, handleRestart, handleFullscreen])
+  }, [mode, handlePlay, handleRestart, handleFullscreen, handleLoad, handleClear])
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#050505] font-fraunces text-[#F5F1E8]">
-      {/* Brand bug */}
-      <div className="pointer-events-none fixed left-6 top-6 z-50 select-none font-fraunces text-[15px] font-semibold tracking-tight text-[#F5F1E8]/70">
+    <div className="relative min-h-screen w-full overflow-hidden bg-black font-serif text-[#F5F1E8]">
+      {/* gloss-literature 2026-05-01: brand bug — full cream, no alpha */}
+      <div className="pointer-events-none fixed left-6 top-6 z-50 select-none font-serif text-[15px] font-medium tracking-tight text-[#F5F1E8]">
         axiom · teleprompter
       </div>
 
-      {/* The glass sheet */}
+      {/* gloss-literature 2026-05-01: hairline reading frame — no glass, no fill */}
       <div className="fixed inset-0 z-10 flex items-center justify-center px-3 py-3 md:px-12 md:py-10">
         <div
           ref={cardRef}
           className="fade-in relative h-[96vh] w-full overflow-hidden rounded-[18px] md:h-[78vh] md:w-[82%]"
           style={{
-            background: 'rgba(20,18,20,0.45)',
-            backdropFilter: 'blur(20px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow:
-              'inset 0 0 80px rgba(255,240,220,0.04), 0 30px 80px rgba(0,0,0,0.55)',
-            opacity: 0.97,
+            // gloss-literature 2026-05-01: card matches page tone — differentiated by hairline + typography only
+            background: 'transparent',
+            border: '1px solid rgba(245,241,232,0.10)',
+            // opacity-control 2026-05-01: fade reading surface in view mode; edit mode stays fully visible
+            opacity: mode === 'view' ? opacity : 1,
+            transition: 'opacity 200ms ease-out',
           }}
         >
           {mode === 'edit' ? (
@@ -254,7 +280,6 @@ export default function App() {
               draftScript={draftScript}
               setDraftScript={setDraftScript}
               onLoad={handleLoad}
-              onClear={handleClear}
             />
           ) : (
             <ViewPanel
@@ -273,8 +298,9 @@ export default function App() {
         <div className="pointer-events-none fixed inset-0 z-40 flex items-center justify-center">
           <div
             key={countdown}
-            className="countdown-digit font-fraunces text-[180px] font-medium leading-none text-[#F5F1E8] md:text-[240px]"
-            style={{ textShadow: '0 0 80px rgba(255,240,220,0.35)' }}
+            className="countdown-digit font-serif text-[180px] font-medium leading-none text-[#F5F1E8] md:text-[240px]"
+            // gloss-literature 2026-05-01: keep cream halo glow — single-tone accent on true black
+            style={{ textShadow: '0 0 80px rgba(245,241,232,0.30)' }}
           >
             {countdown}
           </div>
@@ -303,6 +329,11 @@ export default function App() {
             onMirror={() => setMirrored(m => !m)}
             onFullscreen={handleFullscreen}
             onEdit={handleEdit}
+            // opacity-control 2026-05-01: opacity props + collapsible reveal
+            opacity={opacity}
+            showOpacity={showOpacity}
+            onOpacity={setOpacity}
+            onToggleOpacity={() => setShowOpacity(s => !s)}
           />
         </div>
       )}
@@ -314,57 +345,47 @@ function EditPanel({
   draftScript,
   setDraftScript,
   onLoad,
-  onClear,
 }: {
   draftScript: string
   setDraftScript: (s: string) => void
   onLoad: () => void
-  onClear: () => void
 }) {
+  // gloss-literature 2026-05-01 + fonts-only 2026-05-01: pure typography empty state
+  // Title + subhead + textarea + shortcut row. No buttons.
+  // Cmd/Ctrl+Enter inside the textarea loads (since plain L would type).
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-5 p-6 md:gap-7 md:p-12">
-      <div className="font-fraunces text-2xl font-medium text-[#F5F1E8]/85 md:text-3xl">
+    <div className="flex h-full flex-col items-center justify-center gap-6 p-6 md:gap-8 md:p-12">
+      <div className="font-serif text-3xl font-medium text-[#F5F1E8] md:text-4xl">
         Paste your script
+      </div>
+      <div className="font-serif text-base italic text-[#F5F1E8]/60 md:text-lg">
+        Start typing or paste here. Auto-saves as you go.
       </div>
       <textarea
         value={draftScript}
         onChange={e => setDraftScript(e.target.value)}
-        placeholder="Start typing or paste here. Auto-saves as you go."
-        className="w-full max-w-3xl flex-1 resize-none bg-transparent font-fraunces text-base leading-relaxed text-[#F5F1E8] placeholder-[#F5F1E8]/30 focus:outline-none md:text-lg"
+        onKeyDown={e => {
+          // fonts-only 2026-05-01: Cmd/Ctrl+Enter loads from inside the textarea
+          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            e.preventDefault()
+            onLoad()
+          }
+        }}
+        placeholder=""
+        className="w-full max-w-3xl flex-1 resize-none bg-transparent font-serif text-base leading-relaxed text-[#F5F1E8] focus:outline-none md:text-lg"
         style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          // gloss-literature 2026-05-01: textarea is a hairline-bordered field, no fill
+          background: 'transparent',
+          border: '1px solid rgba(245,241,232,0.10)',
           borderRadius: '12px',
           padding: '20px 22px',
           maxHeight: '60vh',
         }}
         autoFocus
       />
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onClear}
-          className="rounded-full px-5 py-2.5 font-fraunces text-sm text-[#F5F1E8]/60 transition-colors hover:bg-white/5 hover:text-[#F5F1E8]/90"
-        >
-          Clear
-        </button>
-        <button
-          onClick={onLoad}
-          disabled={!draftScript.trim()}
-          className="rounded-full px-7 py-2.5 font-fraunces text-base font-medium transition-all"
-          style={{
-            background: 'rgba(245,241,232,0.94)',
-            color: '#0a0a0a',
-            opacity: draftScript.trim() ? 1 : 0.35,
-            boxShadow: draftScript.trim()
-              ? '0 8px 32px rgba(245,241,232,0.18)'
-              : 'none',
-          }}
-        >
-          Load
-        </button>
-      </div>
-      <div className="font-fraunces text-[11px] uppercase tracking-[0.18em] text-[#F5F1E8]/35">
-        Space · play  ·  R · restart  ·  ↑↓ · speed  ·  M · mirror  ·  F · full-screen
+      <div className="font-serif text-[11px] uppercase tracking-[0.18em] text-[#F5F1E8]/45">
+        {/* fonts-only 2026-05-01: keyboard is the only interaction surface in the empty state */}
+        L · load  ·  C · clear  ·  Space · play  ·  R · restart  ·  ↑↓ · speed  ·  M · mirror  ·  F · full-screen
       </div>
     </div>
   )
@@ -388,29 +409,29 @@ function ViewPanel({
       className="no-scrollbar relative h-full w-full overflow-hidden"
       style={{ transform: mirrored ? 'scaleX(-1)' : undefined }}
     >
-      {/* Reading line */}
+      {/* gloss-literature 2026-05-01: reading-line marker — single cream hairline with alpha falloff */}
       <div
         className="pointer-events-none absolute left-0 right-0 z-10"
         style={{
           top: '38%',
           height: '1px',
           background:
-            'linear-gradient(to right, transparent, rgba(255,240,220,0.18), transparent)',
+            'linear-gradient(to right, transparent, rgba(245,241,232,0.18), transparent)',
         }}
       />
-      {/* Top + bottom fade masks */}
+      {/* gloss-literature 2026-05-01: fade masks — pure black, no tint */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 z-20 h-24 md:h-32"
         style={{
           background:
-            'linear-gradient(to bottom, rgba(20,18,20,0.85), rgba(20,18,20,0))',
+            'linear-gradient(to bottom, rgba(0,0,0,0.95), rgba(0,0,0,0))',
         }}
       />
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-24 md:h-32"
         style={{
           background:
-            'linear-gradient(to top, rgba(20,18,20,0.85), rgba(20,18,20,0))',
+            'linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0))',
         }}
       />
 
@@ -420,7 +441,8 @@ function ViewPanel({
         style={{
           fontSize: `${fontSize}px`,
           lineHeight: 1.4,
-          color: 'rgba(245,241,232,0.92)',
+          // gloss-literature 2026-05-01: full cream, no muted alpha on the reading text
+          color: '#F5F1E8',
           fontWeight: 500,
           paddingTop: '38vh',
           paddingBottom: '60vh',
@@ -448,6 +470,11 @@ function ControlDock({
   onMirror,
   onFullscreen,
   onEdit,
+  // opacity-control 2026-05-01: opacity slider + collapsible reveal
+  opacity,
+  showOpacity,
+  onOpacity,
+  onToggleOpacity,
 }: {
   playing: boolean
   speed: number
@@ -460,16 +487,20 @@ function ControlDock({
   onMirror: () => void
   onFullscreen: () => void
   onEdit: () => void
+  // opacity-control 2026-05-01
+  opacity: number
+  showOpacity: boolean
+  onOpacity: (n: number) => void
+  onToggleOpacity: () => void
 }) {
   return (
     <div
       className="flex items-center gap-1.5 rounded-full px-3 py-2 md:gap-2 md:px-4 md:py-2.5"
       style={{
-        background: 'rgba(15,14,16,0.55)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 14px 40px rgba(0,0,0,0.45)',
+        // gloss-literature 2026-05-01: solid black + cream hairline; no glass blur, no grey tints
+        background: '#000000',
+        border: '1px solid rgba(245,241,232,0.14)',
+        boxShadow: '0 14px 40px rgba(0,0,0,0.55)',
       }}
     >
       <DockButton onClick={onPlay} title={playing ? 'Pause (Space)' : 'Play (Space)'}>
@@ -480,7 +511,7 @@ function ControlDock({
       </DockButton>
       <Divider />
       <div className="flex items-center gap-2 px-2 md:px-3">
-        <span className="hidden font-fraunces text-[10px] uppercase tracking-[0.18em] text-[#F5F1E8]/45 md:inline">
+        <span className="hidden font-serif text-[10px] uppercase tracking-[0.18em] text-[#F5F1E8]/45 md:inline">
           Speed
         </span>
         <input
@@ -492,33 +523,60 @@ function ControlDock({
           className="w-20 md:w-28"
           aria-label="Speed in words per minute"
         />
-        <span className="w-8 text-right font-fraunces text-[12px] tabular-nums text-[#F5F1E8]/75 md:w-10">
+        <span className="w-8 text-right font-serif text-[12px] tabular-nums text-[#F5F1E8] md:w-10">
           {speed}
         </span>
       </div>
       <Divider />
       <div className="flex items-center gap-1 px-1 md:gap-1.5 md:px-2">
-        <span className="hidden font-fraunces text-[10px] uppercase tracking-[0.18em] text-[#F5F1E8]/45 md:inline">
+        <span className="hidden font-serif text-[10px] uppercase tracking-[0.18em] text-[#F5F1E8]/45 md:inline">
           Size
         </span>
         <button
           onClick={() => onFontSize(s => Math.max(20, s - 4))}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-[#F5F1E8]/70 transition-colors hover:bg-white/5 hover:text-[#F5F1E8]"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[#F5F1E8] transition-colors hover:bg-[#F5F1E8]/10"
           aria-label="Decrease font size"
         >
           −
         </button>
-        <span className="w-7 text-center font-fraunces text-[12px] tabular-nums text-[#F5F1E8]/75">
+        <span className="w-7 text-center font-serif text-[12px] tabular-nums text-[#F5F1E8]">
           {fontSize}
         </span>
         <button
           onClick={() => onFontSize(s => Math.min(140, s + 4))}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-[#F5F1E8]/70 transition-colors hover:bg-white/5 hover:text-[#F5F1E8]"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-[#F5F1E8] transition-colors hover:bg-[#F5F1E8]/10"
           aria-label="Increase font size"
         >
           +
         </button>
       </div>
+      <Divider />
+      {/* opacity-control 2026-05-01: collapsible opacity slider — eye toggle, then inline slider when active */}
+      <DockButton
+        onClick={onToggleOpacity}
+        title="Opacity"
+        active={showOpacity}
+        ariaPressed={showOpacity}
+      >
+        <OpacityIcon />
+      </DockButton>
+      {showOpacity && (
+        <div className="flex items-center gap-2 px-1 md:px-2">
+          <input
+            type="range"
+            min={30}
+            max={100}
+            step={1}
+            value={Math.round(opacity * 100)}
+            onChange={e => onOpacity(Number(e.target.value) / 100)}
+            className="w-20 md:w-24"
+            aria-label="Reading surface opacity percent"
+          />
+          <span className="w-10 text-right font-serif text-[12px] tabular-nums text-[#F5F1E8]">
+            {Math.round(opacity * 100)}%
+          </span>
+        </div>
+      )}
       <Divider />
       <DockButton
         onClick={onMirror}
@@ -534,7 +592,7 @@ function ControlDock({
       <Divider />
       <button
         onClick={onEdit}
-        className="rounded-full px-3.5 font-fraunces text-[12px] text-[#F5F1E8]/70 transition-colors hover:bg-white/5 hover:text-[#F5F1E8] md:px-4"
+        className="rounded-full px-3.5 font-serif text-[12px] text-[#F5F1E8] transition-colors hover:bg-[#F5F1E8]/10 md:px-4"
         style={{ height: 36 }}
       >
         Edit
@@ -562,8 +620,8 @@ function DockButton({
       title={title}
       aria-label={title}
       aria-pressed={ariaPressed}
-      className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/5"
-      style={{ background: active ? 'rgba(245,241,232,0.12)' : 'transparent' }}
+      className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[#F5F1E8]/10"
+      style={{ background: active ? 'rgba(245,241,232,0.14)' : 'transparent' }}
     >
       {children}
     </button>
@@ -571,7 +629,8 @@ function DockButton({
 }
 
 function Divider() {
-  return <div className="h-7 w-px bg-white/10" />
+  // gloss-literature 2026-05-01: cream hairline, not muted white-with-alpha
+  return <div className="h-7 w-px bg-[#F5F1E8]/15" />
 }
 
 function PlayIcon() {
@@ -641,6 +700,15 @@ function FullscreenIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  )
+}
+// opacity-control 2026-05-01: half-filled circle glyph (design-tool opacity convention)
+function OpacityIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="5.5" stroke="#F5F1E8" strokeWidth="1.2" />
+      <path d="M8 2.5 A5.5 5.5 0 0 1 8 13.5 Z" fill="#F5F1E8" />
     </svg>
   )
 }

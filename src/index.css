@@ -10,12 +10,14 @@ html,
 body,
 #root {
   height: 100%;
-  background: #050505;
+  /* gloss-literature 2026-05-01: true black, no tint */
+  background: #000000;
 }
 
 body {
   margin: 0;
-  font-family: 'Fraunces', Georgia, serif;
+  /* gloss-literature 2026-05-01: EB Garamond — literary serif */
+  font-family: 'EB Garamond', Georgia, serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
@@ -72,15 +74,37 @@ input[type='range']::-moz-range-thumb {
   box-shadow: 0 0 12px rgba(255, 240, 220, 0.25);
 }
 
-/* Subtle ambient backdrop glow */
+/* gloss-literature 2026-05-01: lacquered-surface sheen — single radial highlight at top-center */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(60% 50% at 50% 30%, rgba(255, 240, 220, 0.04), transparent 70%),
-    radial-gradient(40% 30% at 50% 90%, rgba(180, 200, 255, 0.025), transparent 70%);
+  background: radial-gradient(
+    600px 400px at 50% 0%,
+    rgba(255, 255, 255, 0.05),
+    transparent 70%
+  );
+  z-index: 0;
+}
+
+/* gloss-literature 2026-05-01: hairline cream gradient near top edge — implies polished surface meeting light */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(245, 241, 232, 0.10),
+    rgba(245, 241, 232, 0.18),
+    rgba(245, 241, 232, 0.10),
+    transparent
+  );
   z-index: 0;
 }
 
