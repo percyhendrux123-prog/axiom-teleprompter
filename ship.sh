@@ -91,15 +91,31 @@ log "Repo: $REPO_URL"
 
 # ---------- netlify ----------
 SITE_NAME="$REPO_NAME-$(printf '%04x' $((RANDOM % 65536)))"
+NTL_TEAM="${NTL_TEAM:-percyhendrux123}"
 
 if [[ ! -f .netlify/state.json ]]; then
-  log "Creating Netlify site: $SITE_NAME"
-  "${NTL[@]}" sites:create --name "$SITE_NAME" --with-ci 2>&1 | tee -a "$LOG" || \
-    "${NTL[@]}" sites:create --name "$SITE_NAME" 2>&1 | tee -a "$LOG" || true
-  if [[ ! -f .netlify/state.json ]]; then
-    log "sites:create did not auto-link; trying netlify link..."
+  log "Creating Netlify site: $SITE_NAME (team: $NTL_TEAM)"
+  CREATE_OUT="$("${NTL[@]}" sites:create --name "$SITE_NAME" --account-slug "$NTL_TEAM" 2>&1 || true)"
+  echo "$CREATE_OUT" | tee -a "$LOG"
+
+  SITE_ID="$(echo "$CREATE_OUT" | sed -n 's/.*Site Id:[[:space:]]*\([a-f0-9-]*\).*/\1/p' | head -n1)"
+  if [[ -z "$SITE_ID" ]]; then
+    SITE_ID="$(echo "$CREATE_OUT" | sed -n 's/.*\"id\":[[:space:]]*\"\([a-f0-9-]*\)\".*/\1/p' | head -n1)"
+  fi
+
+  if [[ -n "$SITE_ID" ]]; then
+    log "Linking project to site id: $SITE_ID"
+    "${NTL[@]}" link --id "$SITE_ID" 2>&1 | tee -a "$LOG" || true
+  else
+    log "Could not parse site id; trying link by name."
     "${NTL[@]}" link --name "$SITE_NAME" 2>&1 | tee -a "$LOG" || true
   fi
+fi
+
+# Defensive — verify state.json points to OUR new site, not a stale link.
+if [[ -f .netlify/state.json ]]; then
+  LINKED_ID="$(sed -n 's/.*"siteId":[[:space:]]*"\([^"]*\)".*/\1/p' .netlify/state.json | head -n1)"
+  log "Linked siteId: $LINKED_ID"
 fi
 
 log "Deploying to Netlify (production)..."
