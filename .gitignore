@@ -7,3 +7,6 @@ dist-ssr
 .env
 .env.local
 .netlify
+*.tsbuildinfo
+.ship.log
+.ship.stdout
